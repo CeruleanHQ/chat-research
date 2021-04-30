@@ -1,2 +1,4 @@
-# chat-research
-Bryan's chat research
+# Chat Research Project
+By Bryan and Pablo
+
+Based on something something
