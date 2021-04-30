@@ -9,7 +9,18 @@ import pytchat
 from matplotlib import pyplot
 from dateutil.parser import parse
 
+
 # https://pypi.org/project/pytchat/
+
+
+def get_yt_chat() -> None:
+    """Get Youtube Chat messages"""
+    chat = pytchat.create("FIjfTgueG70")
+    while chat.is_alive():
+        chat_data = chat.get()
+        for chat_info in chat_data.items:
+            print(f"{chat_info.datetime} - {chat_info.author.name} - {chat_info.message}")
+
 
 def read_file(filename: str) -> list:
     """Read File
@@ -54,10 +65,19 @@ def process_with_regex(chat_content: list) -> dict:
     df = pd.DataFrame(data=proc_beats).T
     df.index = pd.DatetimeIndex(pd.to_datetime(df.index))
 
+    print(35*"⏳")
+    # print(df.groupby([df.index.second]).tail())
+    keywors = get_keywords()
+    for data, moredata in df.groupby([df.index.second]).tail().items():
+        
+        moredata.tail()
+    print(dir(moredata))
+    # print(df.boxplot("datetime", "30_second"))
+    # print(df)
     # by_hour = pd.to_datetime(df["datetime"].dt.to_period("H").sort_index())
     # by_hour.index = pd.PeriodIndex(by_hour.index)
     # df.resample("H", on="datetime").name.sum()
-    print(df)
+    print(35*"⌛️")
     return proc_beats
 
 
@@ -86,13 +106,5 @@ def process_chat_content(chat_content: list, keywords: list) -> None:
     # print(keywords)
 
 
-
 if __name__ == "__main__":
-    # process_chat_content(read_file("chat1.txt"), get_keywords())
-    chat = pytchat.create("FIjfTgueG70")
-    while chat.is_alive():
-        chat_data = chat.get()
-        for chat_info in chat_data.items:
-            print(chat_info.author.name)
-            print(chat_info.timestamp)
-            print(chat_info.message)
+    process_chat_content(read_file("chat1.txt"), get_keywords())
