@@ -54,32 +54,31 @@ def process_with_regex(chat_content: list) -> dict:
             item,
         )
         clean_datetime = x.group("datetime").replace("[", "").replace("]", "")
+        clean_datetime = pd.to_datetime(clean_datetime)
         proc_beats[clean_datetime] = {
             "datetime": clean_datetime,
             "name": x.group("name"),
             "message": x.group("message")
         }
 
-    columns = ("DATETIME", "NAME")
-
     df = pd.DataFrame(data=proc_beats).T
-    df.index = pd.DatetimeIndex(pd.to_datetime(df.index))
+    df.index = pd.DatetimeIndex(df.index)
 
-    print(35*"⏳")
-    # print(df.groupby([df.index.second]).tail())
-    keywors = get_keywords()
-    for data, moredata in df.groupby([df.index.second]).tail().items():
-        
-        moredata.tail()
-    print(dir(moredata))
-    # print(df.boxplot("datetime", "30_second"))
-    # print(df)
-    # by_hour = pd.to_datetime(df["datetime"].dt.to_period("H").sort_index())
-    # by_hour.index = pd.PeriodIndex(by_hour.index)
-    # df.resample("H", on="datetime").name.sum()
-    print(35*"⌛️")
-    return proc_beats
+    time_groups = df.groupby([pd.Grouper(key="datetime", freq="30S")])
+    groups_data = time_groups.groups
 
+    keywords = get_keywords()
+    stats = {}
+    for group_data in groups_data:
+        group = time_groups.get_group(group_data)
+        messages = " ".join(group.message.values)
+
+        str_timestamp = group_data.strftime("%m-%d-%Y %H:%M:%S")
+        stats[str_timestamp] = {}
+        for keyword in keywords:
+            stats[str_timestamp][keyword] = messages.count(keyword)
+
+    return stats
 
 def show_graph():
     # x-axis values
@@ -95,13 +94,15 @@ def show_graph():
 
     pyplot.show()
 
+def generate_graph(stats: dict) -> None:
+    ...
 
 def process_chat_content(chat_content: list, keywords: list) -> None:
     """
     Will process things
 
     """
-    proc_beats = process_with_regex(chat_content)
+    stats = process_with_regex(chat_content)
 
     # print(keywords)
 
