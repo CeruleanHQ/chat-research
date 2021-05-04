@@ -144,15 +144,7 @@ def show_graph(df: pd.DataFrame) -> None:
 
 
 def process_chat_content() -> None:
-    """
-    Process
-    Args:
-        chat_content:
-        keywords:
-
-    Returns:
-
-    """
+    """Process everything"""
     chat_content = read_file("chat1.txt")
     keywords = get_keywords()
 
