@@ -10,17 +10,37 @@ import pytchat
 from matplotlib import pyplot
 
 
-def process_yt_chat(youtube_id: str, csv_file: str = "") -> None:
-    """Get Youtube Chat messages"""
-    # We're not using this right now
+def process_yt_chat(youtube_id: str) -> dict:
+    """Get Youtube Chat messages
+    Args:
+        youtube_id: YouTube video ID
+    """
+
     # https://pypi.org/project/pytchat/
     chat = pytchat.create(youtube_id)
+    chat_messages = {}
     while chat.is_alive():
         chat_data = chat.get()
         for chat_info in chat_data.items:
-            print(
-                f"{chat_info.datetime} - {chat_info.author.name} - {chat_info.message}"
-            )
+            chat_messages[chat_info.datetime] = {
+                "datetime": chat_info.datetime,
+                "name": chat_info.author.name,
+                "message": chat_info.message,
+            }
+
+    return chat_messages
+
+
+def save_file(contents: str, filename: str) -> None:
+    """Save contents into a text file
+
+    Args:
+        contents: Contents to save
+        filename: file name
+    """
+    text_file = open(filename, "w")
+    text_file.write(contents)
+    text_file.close()
 
 
 def read_file(filename: str) -> list:
@@ -111,7 +131,9 @@ def create_data_frame(
         messages = " ".join(group.message.values)
 
         # This timestamp format can be changed if needed
-        str_timestamp = group_data.strftime("%m-%d-%Y %H:%M:%S")
+        str_timestamp = group_data.strftime("%Y-%m-%d %H:%M:%S")
+        # str_timestamp = group_data.strftime("%m-%d-%Y %H:%M:%S")
+        # str_timestamp = group_data.strftime("%H:%M:%S")
 
         # Initialise the Dictionary structure so I can fill it with stats
         stats[str_timestamp] = {}
@@ -121,7 +143,8 @@ def create_data_frame(
         be converted to another data set for graph generation.
         """
         for keyword in keywords:
-            stats[str_timestamp][keyword] = messages.count(keyword)
+            msg_count = messages.upper().count(keyword.upper())
+            stats[str_timestamp][keyword] = msg_count
 
     return pd.DataFrame(data=stats).T
 
@@ -187,6 +210,14 @@ def parse_arguments():
         help="Youtube ID to get the chat from",
         dest="youtube_id",
     )
+
+    parser.add_argument(
+        "-yto",
+        "--youtube-output",
+        help="Will save chat contents in the given filename",
+        dest="youtube_text_file",
+    )
+
     parser.add_argument(
         "-o", "--output", dest="output_csv", help="Output CSV file name"
     )
@@ -215,7 +246,7 @@ def config_logger() -> None:
     logging.basicConfig(
         format="%(asctime)s:%(levelname).1s:" " %(message)s",
         datefmt="%y-%m-%dT%H:%M:%S",
-        level=logging.DEBUG,
+        level=logging.INFO,
     )
 
 
@@ -230,8 +261,20 @@ if __name__ == "__main__":
     logging.info(20 * "➿")
 
     if args.youtube_id:
-        logging.info("Received YouTube ID, will download that chat")
-        process_yt_chat(args.youtube_id, args.output_csv)
+        logging.info(f"Received YouTube ID {args.youtube_id}")
+        chat_data = process_yt_chat(args.youtube_id)
+
+        lines = []
+        if args.youtube_text_file:
+            logging.info(f"Saving YT chat in {args.youtube_text_file}")
+            for chat_timestamp, chat_info in chat_data.items():
+                chat_msg = (
+                    f"{chat_info['datetime']} "
+                    f"{chat_info['name']}: {chat_info['message']}"
+                )
+                lines.append(chat_msg)
+        save_file("\n".join(lines), args.youtube_text_file)
+
     else:
         logging.info(f"Processing chat file {args.chat_file}")
         process_chat_content(
