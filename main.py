@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
+import argparse
+import logging
 import os
 import re
 
 import pandas as pd
-import pandas.plotting
 import pytchat
 from matplotlib import pyplot
 
 
-def get_yt_chat() -> None:
+def process_yt_chat(youtube_id: str, csv_file: str = "") -> None:
     """Get Youtube Chat messages"""
     # We're not using this right now
     # https://pypi.org/project/pytchat/
-    chat = pytchat.create("FIjfTgueG70")
+    chat = pytchat.create(youtube_id)
     while chat.is_alive():
         chat_data = chat.get()
         for chat_info in chat_data.items:
@@ -39,13 +40,15 @@ def read_file(filename: str) -> list:
         return file_content
 
 
-def get_keywords() -> list:
+def get_keywords(keywords_file) -> list:
     """Return a list of keywords"""
-    keywords = read_file("keywords.txt")
+    keywords = read_file(keywords_file)
     return keywords
 
 
-def create_data_frame(chat_content: list, keywords: list) -> pd.DataFrame:
+def create_data_frame(
+    chat_content: list, keywords: list, time_interval: str = "4T"
+) -> pd.DataFrame:
     """
     Generate a usable Data Set from the chat content
 
@@ -89,7 +92,7 @@ def create_data_frame(chat_content: list, keywords: list) -> pd.DataFrame:
     1H = Intervals of 1 Hour
     """
     # Group the data into time intervals
-    time_groups = df.groupby([pd.Grouper(key="datetime", freq="5T")])
+    time_groups = df.groupby([pd.Grouper(key="datetime", freq=time_interval)])
 
     # Get all the generated groups for processing
     groups_data = time_groups.groups
@@ -134,8 +137,8 @@ def show_graph(df: pd.DataFrame) -> None:
     df.plot.area(
         # xlabel="Time",
         # ylabel="Sum of Key",
-        rot=25,  # rotation of x axis Labels
-        # stacked=True,
+        # rot=25,  # rotation of x axis Labels
+        stacked=True,
         sort_columns=True,
         # subplots=True
     )
@@ -143,14 +146,97 @@ def show_graph(df: pd.DataFrame) -> None:
     pyplot.show()
 
 
-def process_chat_content() -> None:
-    """Process everything"""
-    chat_content = read_file("chat1.txt")
-    keywords = get_keywords()
+def save_to_csv(df: pd.DataFrame, csv_file: str) -> None:
+    """Save the DataFrame into a csv file"""
+    df.to_csv(csv_file)
 
-    df = create_data_frame(chat_content, keywords)
-    show_graph(df)
+
+def process_chat_content(
+    text_filename: str,
+    keywords_file: str,
+    csv_file: str = "",
+    time_interval: str = "4T",
+) -> None:
+    """Process a chat filename and show the graph or output a CSV file"""
+    chat_content = read_file(text_filename)
+    keywords = get_keywords(keywords_file)
+
+    df = create_data_frame(chat_content, keywords, time_interval=time_interval)
+
+    if csv_file:
+        logging.info(f"Saving results to {csv_file}")
+        save_to_csv(df, csv_file)
+    else:
+        logging.info("Generating graph")
+        show_graph(df)
+
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description="Chat Processor")
+    parser.add_argument(
+        "-f",
+        "--file",
+        dest="chat_file",
+        help="Chat text file to process",
+        default="chat.txt",
+    )
+    parser.add_argument(
+        "-yt",
+        "--youtube",
+        help="Youtube ID to get the chat from",
+        dest="youtube_id",
+    )
+    parser.add_argument(
+        "-o", "--output", dest="output_csv", help="Output CSV file name"
+    )
+
+    parser.add_argument(
+        "-k",
+        "--keywords-file",
+        dest="keywords_file",
+        default="keywords.txt",
+        help="Keywords file",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--time-interval",
+        dest="time_interval",
+        help="Time interval range for stats",
+        default="4T",
+    )
+
+    return parser.parse_args()
+
+
+def config_logger() -> None:
+    """Set up the logging information, for prettier messages."""
+    logging.basicConfig(
+        format="%(asctime)s:%(levelname).1s:" " %(message)s",
+        datefmt="%y-%m-%dT%H:%M:%S",
+        level=logging.DEBUG,
+    )
 
 
 if __name__ == "__main__":
-    process_chat_content()
+    config_logger()
+
+    # Use command line arguments for flexibility
+    args = parse_arguments()
+
+    logging.info(20 * "➿")
+    logging.info("         💬 CHAT PARSER 1.0 💬")
+    logging.info(20 * "➿")
+
+    if args.youtube_id:
+        logging.info("Received YouTube ID, will download that chat")
+        process_yt_chat(args.youtube_id, args.output_csv)
+    else:
+        logging.info(f"Processing chat file {args.chat_file}")
+        process_chat_content(
+            args.chat_file,
+            args.keywords_file,
+            args.output_csv,
+            args.time_interval,
+        )
