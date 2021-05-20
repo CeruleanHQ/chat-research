@@ -79,12 +79,18 @@ def create_data_frame(
     proc_beats = {}
     for item in chat_content:
         # RegEx to process the chat line format
-        x = re.match(
-            r"^(?P<datetime>\[.+?\])\s+(?P<name>[^:]+):\s+(?P<message>[\s\S]+?)$",
-            item,
-        )
-        # Remove the brackets in the timestamp, those are not needed
-        clean_datetime = x.group("datetime").replace("[", "").replace("]", "")
+        clean_datetime = "00:00:00"
+        try:
+            x = re.match(
+                r"^(?P<datetime>\[.+?\])\s+(?P<name>[^:]+):\s+(?P<message>[\s\S]+?)$",
+                item,
+            )
+            # Remove the brackets in the timestamp, those are not needed
+            clean_datetime = x.group("datetime").replace("[", "").replace("]", "")
+        except AttributeError:
+            # This usually happens when the message is just an empty line
+            logging.info(item)
+            continue
 
         # Convert the timestamp into something Pandas can understand
         clean_datetime = pd.to_datetime(clean_datetime)
@@ -124,7 +130,10 @@ def create_data_frame(
     for group_data in groups_data:
 
         # Get the subset group
-        group = time_groups.get_group(group_data)
+        try:
+            group = time_groups.get_group(group_data)
+        except KeyError:
+            continue
 
         # We convert a List structure into a single String so it's easier to
         # count words
@@ -269,7 +278,7 @@ if __name__ == "__main__":
             logging.info(f"Saving YT chat in {args.youtube_text_file}")
             for chat_timestamp, chat_info in chat_data.items():
                 chat_msg = (
-                    f"{chat_info['datetime']} "
+                    f"[{chat_info['datetime']}] "
                     f"{chat_info['name']}: {chat_info['message']}"
                 )
                 lines.append(chat_msg)
