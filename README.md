@@ -1,5 +1,28 @@
-# Chat Research Project
-By Bryan and Pablo
+# Youtube Chat Parser and Processor
+Matt Katz - 2021
+
+## Features
+
+* Parse Youtube video's comments
+* Save as text file if requested
+  
+* Parse plain text file instead of parsing a YouTube video 
+* Load keywords list file
+* Generate report based on chat messages vs keywords, creating a timeline based on time intervals.
+  * Save report as CSV file
+    
+  * Show report as a graph
+
+
+## Roadmap 
+
+* Option to have elapsed time 
+* Support for Twitch Chat parsing
+
+* More configuration options
+* More detailed information on README file
+* Unit testing
+* Split script into proper classes 
 
 ## Usage
 
